@@ -25,7 +25,7 @@ app.get('/countries/:countryId/population',function(request,response) {
   verifyToken(authToken)
     .then(function(plainToken) {
       try {
-        let populationData = currentPopulationData(countryId)
+        var populationData = currentPopulationData(countryId)
         response.status(200)
         response.json( populationData )
       } catch (e) {
@@ -62,7 +62,7 @@ function verifyToken(token) {
 */
 
 function currentPopulationData(countryId) {
-  let theData = null
+  var theData = null
   if (countryId == 1) {
     theData = { total: 44272125, males: 21668578, females: 22603547 }
   } else if (countryId == 2) {
