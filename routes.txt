@@ -1,0 +1,8 @@
+Country consolidated data
+- port 8081
+- endpoint /countries/:countryId/consolidatedData
+
+Country population data
+- port 8082
+- endpoint /countries/:countryId/population
+

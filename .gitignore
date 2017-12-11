@@ -1,0 +1,10 @@
+**/logs/*
+**/node_modules/
+**/tmp
+**/*.log
+
+**/config/development.json
+**/config/test.json
+**/config/default-*.json
+
+**/*.sublime-workspace

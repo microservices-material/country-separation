@@ -1,0 +1,7 @@
+/* 
+	Copy to development.json and assign values of your choice
+*/
+{
+	"ultraSecretKey": , 
+  "countryPopulationService": {"host":, "port":}
+}
