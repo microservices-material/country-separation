@@ -6,6 +6,7 @@ const express = require('express')           // web server
 const bodyParser = require("body-parser");   // addon to express, to make it able to parse post request bodies
 const request = require('request')           // allows to perform HTTP requests
 const Promise = require("bluebird")          // Promise implementation
+var config = require('config');              // configuration (used for authentication key) in separated files
 
 const auth = require('./authentication')       // our (tiny) authentication library
 const service = require('./serviceAccess')     // our (tiny) library to access services
@@ -16,41 +17,57 @@ const app = express()
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
+// service constants
+const countryPopulationServiceHost = config.get("countryPopulationService.host")
+const countryPopulationServicePort = config.get("countryPopulationService.port")
+const cityDataServiceHost = config.get("cityDataService.host")
+const cityDataServicePort = config.get("cityDataService.port")
+
 
 // functions to fetch city and population data through EntityServiceAccess
 function fetchCityData(cityId, token) {
-  return new service.EntityServiceAccess(3011, (cityId) => 'cities/' + cityId)
-    .setToken(token).setEntityId(cityId).accessService()
+  return new service.EntityServiceAccess(
+    cityDataServiceHost, cityDataServicePort, (cityId) => 'cities/' + cityId
+  ).setToken(token).setEntityId(cityId).accessService()
 }
 
 function fetchPopulationData(countryId, token) {
-  return new service.EntityServiceAccess(3021, (countryId) => 'countries/' + countryId + '/population')
-    .setToken(token).setEntityId(countryId).accessService()
+  return new service.EntityServiceAccess(
+    countryPopulationServiceHost, countryPopulationServicePort, 
+    (countryId) => 'countries/' + countryId + '/population'
+  ).setToken(token).setEntityId(countryId).accessService()
 }
 
 
 
 /* country consolidated data - http services */
-app.get('/countries/:countryId/consolidatedInfo',function(request,response) {
+
+app.get('/countries/:countryId/consolidatedData',function(request,response) {
   const countryId = request.params.countryId
   const authToken = request.get("Authorization")
 
   auth.verifyToken(authToken)
     .then(function(plainToken) {
       try {
-        let countryData = countryMainData(countryId)
-        let mainCitiesIds = mainCities(countryId) 
+        // get the info I handle
+        var countryData = countryMainData(countryId)
+        var mainCitiesIds = mainCities(countryId) 
 
-        // we need to query city data, at this point we have only the ids
-        // and also population data
-        let capitalCityQuery = fetchCityData(countryData.capitalCityId, authToken)
-        let mainCitiesQuery = Promise.all(mainCitiesIds.map(
+        // access to separated services: country population and city data 
+        // (the info I handle involves only city ids)
+
+        /* data obtained through service access 
+           - population data
+           - name of the capital city
+           - array of main city data
+        */
+        var mainCitiesFetchOps = Promise.all(mainCitiesIds.map(
           cityId => fetchCityData(cityId, authToken)
         ))
         Promise.all([
           fetchPopulationData(countryId, authToken), 
-          capitalCityQuery, 
-          mainCitiesQuery
+          fetchCityData(countryData.capitalCityId, authToken), 
+          mainCitiesFetchOps
         ])
         .spread(function(populationData, capitalCityData, mainCitiesData) {
           countryData.population = populationData
@@ -75,12 +92,15 @@ app.get('/countries/:countryId/consolidatedInfo',function(request,response) {
 })
 
 
+/* make app ready to accept requests */
+app.listen(8081, null, null, () => console.log('country information service ready'))
+
 
 /*
  business functions
 */
 function countryMainData(countryId) {
-  let theData = null
+  var theData = null
   if (countryId == 1) {
     theData = { name: 'Argentina', continent: 'America', capitalCityId: 1001 }
   } else if (countryId == 2) {
@@ -95,7 +115,7 @@ function countryMainData(countryId) {
 }
 
 function mainCities(countryId) {
-  let theCities = null
+  var theCities = null
   if (countryId == 1) {
     theCities = [1001, 1002, 1003]
   } else if (countryId == 2) {
@@ -112,8 +132,6 @@ function mainCities(countryId) {
 function latLng(lat,lng) { return { lat: lat, lng: lng} }
 
   
-console.log('country information service ready')
-app.listen(3001)
 
 
 

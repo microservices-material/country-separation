@@ -7,7 +7,8 @@ const bodyParser = require("body-parser");   // addon to express, to make it abl
 const request = require('request')           // allows to perform HTTP requests
 const jwt = require('jsonwebtoken')          // handles authentication tokens
 const Promise = require("bluebird")          // Promise implementation
-var config = require('config');              // configuration (used for authentication key) in separated files
+
+const auth = require('./authentication')       // our (tiny) authentication library
 
 // library initialization
 const app = express()
@@ -21,10 +22,10 @@ app.get('/cities/:cityId',function(request,response) {
   const cityId = request.params.cityId
   const authToken = request.get("Authorization")
 
-  verifyToken(authToken)
+  auth.verifyToken(authToken)
     .then(function(plainToken) {
       try {
-        let theData = cityData(cityId)
+        var theData = cityData(cityId)
         response.status(200)
         response.json( theData )
       } catch (e) {
@@ -40,24 +41,15 @@ app.get('/cities/:cityId',function(request,response) {
 })
 
 
-
-/*
- authentication functions 
-*/
-const ultraSecretKey = config.get("ultraSecretKey")
-// nunca jamas poner una clave plana en un repo de codigo
-
-function verifyToken(token) {
- return Promise.promisify(jwt.verify)(token, ultraSecretKey, {}) 
-}
-
+/* make app ready to accept requests */
+app.listen(8083, null, null, () => console.log('city data service ready'))
 
 /*
  business functions
 */
 
 function cityData(cityId) {
-  let theData = null
+  var theData = null
   if (cityId == 1001) {
     theData = { name: 'Buenos Aires', latLng: latLng(-34.6,-58.38), population: 13588171 }
   } else if (cityId == 1002) {
@@ -85,8 +77,6 @@ function cityData(cityId) {
 function latLng(lat,lng) { return { lat: lat, lng: lng} }
 
   
-console.log('city data service ready')
-app.listen(3011)
 
 
 

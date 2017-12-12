@@ -7,7 +7,8 @@ const bodyParser = require("body-parser");   // addon to express, to make it abl
 const request = require('request')           // allows to perform HTTP requests
 const jwt = require('jsonwebtoken')          // handles authentication tokens
 const Promise = require("bluebird")          // Promise implementation
-var config = require('config');              // configuration (used for authentication key) in separated files
+
+const auth = require('./authentication')       // our (tiny) authentication library
 
 // library initialization
 const app = express()
@@ -22,7 +23,7 @@ app.get('/countries/:countryId/population',function(request,response) {
   const countryId = request.params.countryId
   const authToken = request.get("Authorization")
 
-  verifyToken(authToken)
+  auth.verifyToken(authToken)
     .then(function(plainToken) {
       try {
         var populationData = currentPopulationData(countryId)
@@ -43,17 +44,6 @@ app.get('/countries/:countryId/population',function(request,response) {
 
 /* make app ready to accept requests */
 app.listen(8082, null, null, () => console.log('country population service ready'))
-
-
-/*
- authentication functions 
-*/
-const ultraSecretKey = config.get("ultraSecretKey")
-// nunca jamas poner una clave plana en un repo de codigo
-
-function verifyToken(token) {
- return Promise.promisify(jwt.verify)(token, ultraSecretKey, {}) 
-}
 
 
 

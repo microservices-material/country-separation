@@ -21,11 +21,17 @@ app.use(bodyParser.json());
 const countryPopulationServiceHost = config.get("countryPopulationService.host")
 const countryPopulationServicePort = config.get("countryPopulationService.port")
 
-var populationDataFetcher = new service.EntityServiceAccess(
-  countryPopulationServiceHost, 
-  countryPopulationServicePort, 
-  (countryId) => 'countries/' + countryId + '/population' // endpointBuilder
-)
+
+// function to fetch population data through EntityServiceAccess
+function fetchPopulationData(countryId, token) {
+  var populationDataFetcher = new service.EntityServiceAccess(
+    countryPopulationServiceHost, 
+    countryPopulationServicePort, 
+    (countryId) => 'countries/' + countryId + '/population' // endpointBuilder
+  )
+  return populationDataFetcher
+      .setToken(token).setEntityId(countryId).accessService()  
+}
 
 
 /* country consolidated data - http services */
@@ -41,8 +47,7 @@ app.get('/countries/:countryId/consolidatedData',function(request,response) {
         var countryData = countryMainData(countryId)
         var mainCitiesData = mainCities(countryId) 
         // access to separated population service
-        populationDataFetcher.setToken(authToken).setEntityId(countryId)
-        .accessService()
+        fetchPopulationData(countryId, authToken)
         .then(function(populationData) {
           // assemble data and give response
           countryData.mainCities = mainCitiesData
