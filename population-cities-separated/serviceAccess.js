@@ -1,5 +1,3 @@
-"use strict"
-
 const request = require('request')           // allows to perform HTTP requests
 const Promise = require("bluebird")          // Promise implementation
 
@@ -7,12 +5,10 @@ const Promise = require("bluebird")          // Promise implementation
  generic service access object definition
 */
 class ServiceAccess {
-  constructor(host, port) {
-    this._host = host
+  constructor(port) {
     this._port = port
   }
   
-  host() { return this._host }
   port() { return this._port }
   token() { return this._token }
   setToken(theToken) { this._token = theToken ; return this }
@@ -20,7 +16,7 @@ class ServiceAccess {
   statusCodeBadResponse() { return null }
   statusCodeNoResponse() { return null }
 
-  endpoint() { return this.host() + ':' + this.port() + '/' + this.specificEndpoint() }
+  endpoint() { return 'http://localhost:' + this.port() + '/' + this.specificEndpoint() }
 
   invokeService() { 
     console.log('querying URL: ' + this.endpoint())
@@ -48,8 +44,8 @@ class ServiceAccess {
 }
 
 class EntityServiceAccess extends ServiceAccess {
-  constructor(host, port, endpointBuilder) {
-    super(host, port)
+  constructor(port, endpointBuilder) {
+    super(port)
     this._endpointBuilder = endpointBuilder
   }
 

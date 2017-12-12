@@ -37,13 +37,16 @@ app.get('/countries/:countryId/consolidatedData',function(request,response) {
   auth.verifyToken(authToken)
     .then(function(plainToken) {
       try {
+        // get the info I handle
         var countryData = countryMainData(countryId)
         var mainCitiesData = mainCities(countryId) 
+        // access to separated population service
         populationDataFetcher.setToken(authToken).setEntityId(countryId)
         .accessService()
         .then(function(populationData) {
-          countryData.population = populationData
+          // assemble data and give response
           countryData.mainCities = mainCitiesData
+          countryData.population = populationData
           response.status(200)
           response.json( countryData )
         })
