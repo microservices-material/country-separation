@@ -18,8 +18,8 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 // service constants
-const countryPopulationServiceHost = config.get("countryPopulationService.host")
-const countryPopulationServicePort = config.get("countryPopulationService.port")
+const countrySeparatedDataServiceHost = config.get("countrySeparatedDataService.host")
+const countrySeparatedDataServicePort = config.get("countrySeparatedDataService.port")
 const cityDataServiceHost = config.get("cityDataService.host")
 const cityDataServicePort = config.get("cityDataService.port")
 
@@ -31,10 +31,10 @@ function fetchCityData(cityId, token) {
   ).setToken(token).setEntityId(cityId).accessService()
 }
 
-function fetchPopulationData(countryId, token) {
+function fetchCountryData(countryId, token, whichData) {
   return new service.EntityServiceAccess(
-    countryPopulationServiceHost, countryPopulationServicePort, 
-    (countryId) => 'countries/' + countryId + '/population'
+    countrySeparatedDataServiceHost, countrySeparatedDataServicePort, 
+    (countryId) => 'countries/' + countryId + '/' + whichData
   ).setToken(token).setEntityId(countryId).accessService()
 }
 
@@ -49,28 +49,25 @@ app.get('/countries/:countryId/consolidatedData',function(request,response) {
   auth.verifyToken(authToken)
     .then(function(plainToken) {
       try {
-        // get the info I handle
-        var countryData = countryMainData(countryId)
-        var mainCitiesIds = mainCities(countryId) 
-
-        // access to separated services: country population and city data 
-        // (the info I handle involves only city ids)
-
-        /* data obtained through service access 
-           - population data
-           - name of the capital city
-           - array of main city data
-        */
-        var mainCitiesFetchOps = Promise.all(mainCitiesIds.map(
-          cityId => fetchCityData(cityId, authToken)
-        ))
+        // get all country data
         Promise.all([
-          fetchPopulationData(countryId, authToken), 
-          fetchCityData(countryData.capitalCityId, authToken), 
-          mainCitiesFetchOps
+          fetchCountryData(countryId, authToken, 'mainData'), 
+          fetchCountryData(countryId, authToken, 'mainCities'),
+          fetchCountryData(countryId, authToken, 'population')
         ])
-        .spread(function(populationData, capitalCityData, mainCitiesData) {
+        .spread(function(countryData, mainCitiesIds, populationData) {
           countryData.population = populationData
+          // get data about cities
+          var mainCitiesFetchOps = Promise.all(mainCitiesIds.map(
+            cityId => fetchCityData(cityId, authToken)
+          ))
+          return Promise.all([
+            countryData,
+            fetchCityData(countryData.capitalCityId, authToken), 
+            mainCitiesFetchOps
+          ])
+        })
+        .spread(function(countryData, capitalCityData, mainCitiesData) {
           countryData.capitalCityName = capitalCityData.name
           countryData.mainCities = mainCitiesData
           response.status(200)
@@ -91,6 +88,7 @@ app.get('/countries/:countryId/consolidatedData',function(request,response) {
     })
 })
 
+
 // token generation
 app.post('/token',function(request,response) {
   const theUserName = request.body.userName
@@ -108,43 +106,10 @@ app.post('/token',function(request,response) {
 
 
 /* make app ready to accept requests */
-app.listen(8081, null, null, () => console.log('country information service ready'))
+app.listen(8081, null, null, () => console.log('country consolidated information service ready'))
 
 
-/*
- business functions
-*/
-function countryMainData(countryId) {
-  var theData = null
-  if (countryId == 1) {
-    theData = { name: 'Argentina', continent: 'America', capitalCityId: 1001 }
-  } else if (countryId == 2) {
-    theData = { name: 'Brazil', continent: 'America', capitalCityId: 2001 }
-  } else if (countryId == 3) {
-    theData = { name: 'Thailand', continent: 'Asia', capitalCityId: 3001 }
-  } else {
-    throw new Error("There is no country having id " + countryId)
-  }
-  theData.countryId = countryId
-  return theData
-}
 
-function mainCities(countryId) {
-  var theCities = null
-  if (countryId == 1) {
-    theCities = [1001, 1002, 1003]
-  } else if (countryId == 2) {
-    theCities = [2001, 2002, 2003]
-  } else if (countryId == 3) {
-    theCities = [3001, 3002]
-  } else {
-    throw new Error("There is no country having id " + countryId)
-  }
-  return theCities
-}
-
-
-function latLng(lat,lng) { return { lat: lat, lng: lng} }
 
   
 

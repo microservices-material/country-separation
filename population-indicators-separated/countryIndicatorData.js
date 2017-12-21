@@ -1,4 +1,4 @@
-function indicators(countryId) {
+function countryIndicators(countryId) {
   var theData = null
   // Argentina 
   if (countryId == 1) { 
